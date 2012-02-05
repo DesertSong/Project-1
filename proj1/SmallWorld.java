@@ -123,6 +123,39 @@ public class SmallWorld {
             context.getCounter(ValueUse.EDGE).increment(1);
         }
     }
+    
+    public static class BFS extends Mapper<LongWritable, LongWritable, LongWritable, LongWritable> {
+        public long denom;
+
+        /* Setup is called automatically once per map task. This will
+           read denom in from the DistributedCache, and it will be
+           available to each call of map later on via the instance
+           variable.                                                  */
+        @Override
+        public void setup(Context context) {
+            try {
+                Configuration conf = context.getConfiguration();
+                Path cachedDenomPath = DistributedCache.getLocalCacheFiles(conf)[0];
+                BufferedReader reader = new BufferedReader(
+                                        new FileReader(cachedDenomPath.toString()));
+                String denomStr = reader.readLine();
+                reader.close();
+                denom = Long.decode(denomStr);
+            } catch (IOException ioe) {
+                System.err.println("IOException reading denom from distributed cache");
+                System.err.println(ioe.toString());
+            }
+        }
+
+        /* Will need to modify to not loose any edges. */
+        @Override
+        public void map(LongWritable key, LongWritable value, Context context)
+                throws IOException, InterruptedException {
+            context.write(key, value);
+            // Example of using a counter (counter tagged by EDGE)
+            context.getCounter(ValueUse.EDGE).increment(1);
+        }
+    }
 
 
     /* Insert your mapreduces here
@@ -196,7 +229,7 @@ public class SmallWorld {
             job.setOutputKeyClass(LongWritable.class);
             job.setOutputValueClass(LongWritable.class);
 
-            job.setMapperClass(Mapper.class);
+            job.setMapperClass(Mapper.class);//Change these two lines to adjust map and reduce
             job.setReducerClass(Reducer.class);
 
             job.setInputFormatClass(SequenceFileInputFormat.class);
